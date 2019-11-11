@@ -1,0 +1,209 @@
+---
+title: "Reproducibility Report"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---
+
+# Report Details
+
+```{r}
+articleID <- 6-7-2014 
+reportType <- 'copilot' 
+pilotNames <- 'Effie Li' 
+copilotNames <- 'Ayo Dada' 
+pilotTTC <- 180 
+copilotTTC <- 120 
+pilotStartDate <- '11/09/19' 
+copilotStartDate <- '11/10/19' 
+completionDate <- '11/10/19' 
+```
+
+------
+
+#### Methods summary: 
+
+This study recruited participants from either the eastbound platform or the westbound platform of the Bay Street station in Toronto. Participants each rated how far one of the four stations -- (from west to east) Spadina station, the St. George station, the Bloor-Yonge station, or the Sherbourne station -- felt using a scale from 1 to 7.
+
+------
+
+#### Target outcomes: 
+
+We carried out a 2 (orientation: toward, away from) × 4 (station: Spadina, St. George, Bloor-Yonge, Sherbourne) analysis of variance (ANOVA) on closeness ratings, which revealed no main effect of orientation, F < 1, and a main effect of station, F(3, 194) = 24.10, p < .001, ηp2 = .27. This main effect was qualified by the predicted interaction between orientation and station, F(3, 194) = 16.28, p < .001, ηp2 = .20. We decomposed this interaction by the subjective-distance ratings between participants traveling east and west for each of the four subway stations. Westbound participants rated the stations to the west of Bay Street as closer than did eastbound participants; this effect was obtained for both the station one stop to the west (St. George, p < .001, ηp2 = .28) and the station two stops to the west (Spadina, p = .001, ηp2 = .20). The opposite pattern held true for stations to the east of Bay Street. Eastbound participants rated the stations to the east of Bay Street as closer than did westbound participants; this effect was obtained for both the station one stop to the east (Bloor-Yonge, p = .053, ηp2 = .08) and the station two stops to the east (Sherbourne, p < .001, ηp2 = .24). Figure 1 summarizes these results. comparing
+
+------
+
+```{r global_options, include=FALSE}
+# sets up some formatting options for the R Markdown document
+knitr::opts_chunk$set(echo=TRUE, warning=FALSE, message=FALSE)
+```
+
+# Step 1: Load packages and prepare report object
+
+```{r}
+# load packages
+library(tidyverse) # for data munging
+library(knitr) # for kable table formating
+library(haven) # import and export 'SPSS', 'Stata' and 'SAS' Files
+library(readxl) # import excel files
+library(ReproReports) # custom reporting functions
+library(lsr) # For the computation of ANOVAs in R
+```
+
+```{r}
+# Prepare report object. This will be updated automatically by the reproCheck function each time values are compared
+reportObject <- data.frame(dummyRow = TRUE, reportedValue = NA, obtainedValue = NA, valueType = NA, percentageError = NA, comparisonOutcome = NA, eyeballCheck = NA)
+```
+
+# Step 2: Load data
+
+```{r}
+data = read_excel('GroupB_6-7-2014/data/S1_Subway.xlsx')
+```
+
+# Step 3: Tidy data
+
+This dataset was already in the tidy form.
+
+# Step 4: Run analysis
+
+## Pre-processing
+The original paper did not specify any necessary pre-processing steps.
+
+## Descriptive statistics
+The targeted outcomes do not include descriptive statistics. To help interpret the anova results below, we provide the means and standard deviations of both groups of participants' ratings of distance per station.
+
+```{r}
+descriptives <- data %>%
+  group_by(DIRECTION, STN_NAME) %>%
+  summarize(meanDISTANCE=mean(DISTANCE), stdDISTANCE=sd(DISTANCE))
+```
+
+## Inferential statistics
+
+"We carried out a 2 (orientation: toward, away from) × 4 (station: Spadina, St. George, Bloor-Yonge, Sherbourne) analysis of variance (ANOVA) on closeness ratings, which revealed no main effect of orientation, F < 1, and a main effect of station, F(3, 194) = 24.10, p < .001, ηp2 = .27. This main effect was qualified by the predicted interaction between orientation and station, F(3, 194) = 16.28, p < .001, ηp2 = .20."
+
+```{r}
+# run two-way ANOVA
+fit = aov(DISTANCE ~ DIRECTION*STN_NAME, data = data)
+summary(fit)
+etaSquared(fit)
+
+# check values (in the order of presentation in the quote above)
+# no main effect of orientation (DIRECTION)
+reportObject <- reproCheck(reportedValue = '<1', obtainedValue = '0.664', valueType = 'F', eyeballCheck = TRUE)
+# main effect of station (STN_NAME)
+reportObject <- reproCheck(reportedValue = '3', obtainedValue = '3', valueType = 'df')
+reportObject <- reproCheck(reportedValue = '194', obtainedValue = '194', valueType = 'df')
+reportObject <- reproCheck(reportedValue = '24.10', obtainedValue = '23.349', valueType = 'F')
+reportObject <- reproCheck(reportedValue = '<.001', obtainedValue = '6.01e-13', valueType = 'p', eyeballCheck = TRUE)
+reportObject <- reproCheck(reportedValue = '.27', obtainedValue = '0.265284110', valueType = 'pes')
+# interaction
+reportObject <- reproCheck(reportedValue = '16.28', obtainedValue = '16.283', valueType = 'F')
+reportObject <- reproCheck(reportedValue = '<.001', obtainedValue = '1.77e-09', valueType = 'p', eyeballCheck = TRUE)
+reportObject <- reproCheck(reportedValue = '.20', obtainedValue = '0.201151614', valueType = 'pes')
+```
+
+“We decomposed this interaction by the subjective-distance ratings between participants traveling east and west for each of the four subway stations.”
+
+```{r}
+# split data based on subway stations
+BY = data %>% filter(STN_NAME=='B-Y')
+sher = data %>% filter(STN_NAME=='SHER')
+spad = data %>% filter(STN_NAME=='SPAD')
+stg = data %>% filter(STN_NAME=='STG')
+```
+
+"Westbound participants rated the stations to the west of Bay Street as closer than did eastbound participants; this effect was obtained for both the station one stop to the west (St. George, p < .001, ηp2 = .28)..."  
+
+St. George:
+```{r}
+fit_stg = aov(DISTANCE ~ DIRECTION, data = stg)
+summary(fit_stg)
+etaSquared(fit_stg)
+
+# check values (in the order of presentation in the quote above)
+reportObject <- reproCheck(reportedValue = '<.001', obtainedValue = '7.23e-05', valueType = 'p', eyeballCheck = TRUE)
+reportObject <- reproCheck(reportedValue = '.28', obtainedValue = '0.2772092', valueType = 'pes')
+```
+
+"...and the station two stops to the west (Spadina, p = .001, ηp2 = .20)."  
+
+Spadina:
+```{r}
+fit_spad = aov(DISTANCE ~ DIRECTION, data = spad)
+summary(fit_spad)
+etaSquared(fit_spad)
+
+# check values (in the order of presentation in the quote above)
+reportObject <- reproCheck(reportedValue = '.001', obtainedValue = '0.00113', valueType = 'p')
+reportObject <- reproCheck(reportedValue = '.20', obtainedValue = '0.1962763', valueType = 'pes')
+```
+
+"The opposite pattern held true for stations to the east of Bay Street. Eastbound participants rated the stations to the east of Bay Street as closer than did westbound participants; this effect was obtained for both the station one stop to the east (Bloor-Yonge, p = .053, ηp2 = .08)..."  
+
+Bloor-Yonge:
+```{r}
+fit_by = aov(DISTANCE ~ DIRECTION, data = BY)
+summary(fit_by)
+etaSquared(fit_by)
+
+# check values (in the order of presentation in the quote above)
+reportObject <- reproCheck(reportedValue = '.053', obtainedValue = '0.0528', valueType = 'p')
+reportObject <- reproCheck(reportedValue = '.08', obtainedValue = '0.0774451', valueType = 'pes')
+```
+
+"...and the station two stops to the east (Sherbourne, p < .001, ηp2 = .24)."  
+
+Sherbourne:
+```{r}
+fit_sher = aov(DISTANCE ~ DIRECTION, data = sher)
+summary(fit_sher)
+etaSquared(fit_sher)
+
+# check values (in the order of presentation in the quote above)
+reportObject <- reproCheck(reportedValue = '<.001', obtainedValue = '0.000305', valueType = 'p', eyeballCheck = TRUE)
+reportObject <- reproCheck(reportedValue = '.24', obtainedValue = '0.2356667', valueType = 'pes')
+```
+
+# Step 5: Conclusion
+
+This reproduction of the original analysis descrived in Study 1 was a success. All the values included in the target outcomes were replicated with matching values, except a minor difference (3% difference) of the F-statistic of the main effect of station in the two-way ANOVA.
+
+```{r}
+reportObject <- reportObject %>%
+  filter(dummyRow == FALSE) %>% # remove the dummy row
+  select(-dummyRow) %>% # remove dummy row designation
+  mutate(articleID = articleID) %>% # add variables to report 
+  select(articleID, everything()) # make articleID first column
+
+# decide on final outcome
+if(any(reportObject$comparisonOutcome %in% c("MAJOR_ERROR", "DECISION_ERROR"))){
+  finalOutcome <- "Failure"
+}else{
+  finalOutcome <- "Success"
+}
+
+# collate report extra details
+reportExtras <- data.frame(articleID, pilotNames, copilotNames, pilotTTC, copilotTTC, pilotStartDate, copilotStartDate, completionDate, finalOutcome)
+
+# save report objects
+if(reportType == "pilot"){
+  write_csv(reportObject, "pilotReportDetailed.csv")
+  write_csv(reportExtras, "pilotReportExtras.csv")
+}
+
+if(reportType == "copilot"){
+  write_csv(reportObject, "copilotReportDetailed.csv")
+  write_csv(reportExtras, "copilotReportExtras.csv")
+}
+```
+
+# Session information
+
+[This function will output information about the package versions used in this report:]
+
+```{r session_info, include=TRUE, echo=TRUE, results='markup'}
+devtools::session_info()
+```
